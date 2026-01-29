@@ -7,12 +7,12 @@ A command-line task management application built with Python that allows users t
 - [Features](#features)
 - [Project Structure](#project-structure)
 - [Installation & Setup](#installation--setup)
+- [Database Setup Guide](#database-setup-guide)
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [API Overview](#api-overview)
-- [Database Schema](#database-schema)
-- [Dependencies](#dependencies)
 - [File Descriptions](#file-descriptions)
+- [Troubleshooting](#troubleshooting)
 
 ## Features
 
@@ -22,8 +22,8 @@ A command-line task management application built with Python that allows users t
 - **Mark as Completed**: Mark tasks as done
 - **Delete Tasks**: Remove tasks from the system
 - **Data Persistence**: All tasks are stored in a MySQL database
-- **Unique IDs**: Uses ULID (Universally Unique Lexicographically Sortable Identifier) for reliable task identification
-- **Input Validation**: Validates all user inputs including dates, priorities, and task status
+- **Unique IDs**: Uses ULID for unique task identification
+- **Input Validation**: Comprehensive validation for all inputs
 - **Interactive Menu**: User-friendly command-line interface
 
 ## Project Structure
@@ -33,12 +33,11 @@ OLFU/
 ├── app/
 │   ├── main.py              # Application entry point
 │   ├── task.py              # Task model class
-│   ├── task_app.py          # UI layer (command-line interface)
+│   ├── task_app.py          # UI layer
 │   ├── task_manager.py      # Business logic layer
-│   └── task_db.py           # Database abstraction layer
+│   └── task_db.py           # Database layer
 ├── requirements.txt         # Python dependencies
 ├── README.md                # Project documentation
-├── .gitignore               # Git ignore rules
 └── .venv/                   # Virtual environment
 ```
 
@@ -47,7 +46,7 @@ OLFU/
 ### Prerequisites
 
 - Python 3.7+
-- MySQL Server (5.7+ or 8.0+)
+- MySQL Server
 - pip (Python package manager)
 
 ### Step 1: Clone the Repository
@@ -75,33 +74,97 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### Step 4: Database Setup
+### Step 4: Database Setup (See detailed guide below)
 
-Create a MySQL database and user with the following commands:
+Follow the **Database Setup Guide** section to create the MySQL database and tables.
+
+## Database Setup Guide
+
+### Task Management App – Database Setup
+
+This guide will help you set up MySQL for the Task Management App on a Linux system.
+
+#### 1. Install MySQL
+
+If you don't have MySQL installed, run:
+
+```bash
+sudo apt update
+sudo apt install mysql-server
+```
+
+Check the installation:
+
+```bash
+mysql --version
+```
+
+#### 2. Log in as MySQL root
+
+```bash
+sudo mysql
+```
+
+On a fresh Linux install, root uses socket authentication (no password).
+
+You should see the MySQL prompt:
+
+```
+mysql>
+```
+
+#### 3. Create the database
 
 ```sql
--- Create database
 CREATE DATABASE task_app;
-
--- Create user (if not exists)
-CREATE USER 'task_user'@'localhost' IDENTIFIED BY 'taskpassword';
-
--- Grant privileges
-GRANT ALL PRIVILEGES ON task_app.* TO 'task_user'@'localhost';
-FLUSH PRIVILEGES;
-
--- Create tasks table
 USE task_app;
+```
 
+`task_app` is the database where all tasks will be stored.
+
+#### 4. Create the tasks table
+
+```sql
 CREATE TABLE tasks (
     task_id VARCHAR(26) PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
+    description TEXT,
     due_date DATE NOT NULL,
-    priority VARCHAR(20) NOT NULL,
+    priority VARCHAR(10) NOT NULL,
     status VARCHAR(20) NOT NULL,
     creation_date DATETIME NOT NULL
 );
+```
+
+**Table Details:**
+- **task_id**: ULID (unique identifier, 26 chars)
+- **title**: Task name (required)
+- **description**: Task details (optional)
+- **due_date**: When task is due (date only)
+- **priority**: Low, Medium, or High
+- **status**: Pending, In Progress, or Completed
+- **creation_date**: Datetime when the task was created
+
+#### 5. Create a dedicated database user
+
+It's best practice not to use root for your app:
+
+```sql
+CREATE USER 'task_user'@'localhost' IDENTIFIED BY 'taskpassword';
+GRANT ALL PRIVILEGES ON task_app.* TO 'task_user'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+Verify the user was created:
+
+```sql
+SELECT user FROM mysql.user;
+```
+
+Exit MySQL:
+
+```sql
+EXIT;
 ```
 
 ## Configuration
@@ -112,8 +175,6 @@ The database connection is configured in `app/main.py` with the following defaul
 - **User**: task_user
 - **Password**: taskpassword
 - **Database**: task_app
-
-**⚠️ Security Note**: These credentials are hardcoded for simplicity. For production, use environment variables or a `.env` file.
 
 To customize, modify the connection parameters in `app/main.py`:
 
@@ -132,7 +193,7 @@ python main.py
 
 ### Menu Options
 
-Once the application runs, you'll see the following menu:
+Once the application runs:
 
 ```
 === TASK MANAGER ===
@@ -165,24 +226,18 @@ Choose an option: 2
 ID: 01ARZ3NDEKTSV4RRFFQ69G5FAV | Title: Complete project report | Due: 2026-02-15 | Priority: High | Status: In Progress
 ```
 
+The `list_tasks` method:
+- Displays all tasks in the system
+- Shows task ID, title, due date, priority level, and status
+- Returns an empty message if no tasks exist
+- Tasks are displayed in the order they were created
+
 ### Updating a Task
 
 ```
 Choose an option: 3
 -- Update Task --
 Task ID: 01ARZ3NDEKTSV4RRFFQ69G5FAV
-
-Current Task Details:
-Title                Description                     Due Date     Priority   Status
-------------------------------------------------------------------------------------------
-Complete project r Finish the quarterly report for  2026-02-15   High       In Progress
-
-Enter new values (leave blank to keep current):
-New Title: 
-New Description: Update with latest figures
-New Priority (Low/Medium/High): 
-New Status (Pending/In Progress/Completed): Completed
-New Due Date (YYYY-MM-DD): 
 ```
 
 ### Marking Task as Done
@@ -190,7 +245,6 @@ New Due Date (YYYY-MM-DD):
 ```
 Choose an option: 4
 Task ID: 01ARZ3NDEKTSV4RRFFQ69G5FAV
-Task marked as completed.
 ```
 
 ### Removing a Task
@@ -198,60 +252,51 @@ Task marked as completed.
 ```
 Choose an option: 5
 Task ID: 01ARZ3NDEKTSV4RRFFQ69G5FAV
-Task removed successfully.
 ```
 
 ## API Overview
 
-### Task Class (`task.py`)
+### Task Class (`app/task.py`)
 
-The `Task` class represents a single task with the following attributes:
+Represents a single task with attributes:
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| task_id | str | Unique ULID identifier (auto-generated) |
+| task_id | str | Unique ULID identifier |
 | title | str | Task title |
 | description | str | Task description |
-| due_date | date | Task due date |
+| due_date | date | Due date |
 | priority | str | Priority level (Low, Medium, High) |
-| status | str | Task status (Pending, In Progress, Completed) |
-| creation_date | datetime | Timestamp when task was created |
+| status | str | Status (Pending, In Progress, Completed) |
+| creation_date | datetime | Creation timestamp |
 
-**Methods:**
-- `mark_as_done()` - Changes task status to "Completed"
-
-### TaskManager Class (`task_manager.py`)
+### TaskManager Class (`app/task_manager.py`)
 
 Handles business logic and validation:
 
 **Methods:**
-- `add_task(title, description, due_date, priority_lvl, status)` - Create a new task with validation
+- `add_task()` - Create a new task with validation
 - `list_tasks()` - Retrieve all tasks
-- `update_task(task_id, **kwargs)` - Update task fields
-- `mark_task_as_completed(task_id)` - Mark task as done
-- `remove_task(task_id)` - Delete a task
+- `list_tasks_filtered()` - Filter tasks by due_date, priority, or status
+- `update_task()` - Update task fields
+- `mark_task_as_completed()` - Mark task as done
+- `remove_task()` - Delete a task
 
-**Validation includes:**
-- Non-empty title and description
-- Valid due date (not in the past)
-- Valid priority level (Low, Medium, High)
-- Valid status (Pending, In Progress, Completed)
-
-### TaskDB Class (`task_db.py`)
+### TaskDB Class (`app/task_db.py`)
 
 Handles database operations:
 
 **Methods:**
 - `connect()` - Establish MySQL connection
-- `create_task(task)` - Insert task into database
+- `create_task()` - Insert task into database
 - `fetch_all_tasks()` - Retrieve all tasks from database
-- `update_task(task_id, **kwargs)` - Update task in database
-- `delete_task(task_id)` - Delete task from database
+- `update_task()` - Update task in database
+- `delete_task()` - Delete task from database
 - `close()` - Close database connection
 
-### TaskApp Class (`task_app.py`)
+### TaskApp Class (`app/task_app.py`)
 
-Handles user interface and user interactions:
+Handles user interface and interactions:
 
 **Methods:**
 - `run()` - Start the interactive menu loop
@@ -262,138 +307,32 @@ Handles user interface and user interactions:
 - `mark_completed()` - Handle task completion flow
 - `remove_task()` - Handle task deletion flow
 
-## Database Schema
-
-### tasks Table
-
-```sql
-CREATE TABLE tasks (
-    task_id VARCHAR(26) PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    due_date DATE NOT NULL,
-    priority VARCHAR(20) NOT NULL CHECK (priority IN ('Low', 'Medium', 'High')),
-    status VARCHAR(20) NOT NULL CHECK (status IN ('Pending', 'In Progress', 'Completed')),
-    creation_date DATETIME NOT NULL
-);
-```
-
-## Dependencies
-
-Listed in `requirements.txt`:
-
-- **ulid-py** - For generating ULIDs (Universally Unique Lexicographically Sortable Identifiers)
-- **mysql-connector-python** - For MySQL database connectivity
-
 ## File Descriptions
 
 ### `app/main.py`
-
-Application entry point that:
-- Initializes the MySQL database connection
-- Creates the TaskApp UI instance
-- Runs the application loop
-- Properly closes database connection on exit
+Application entry point that initializes the database connection and runs the application.
 
 ### `app/task.py`
-
-Defines the `Task` class with:
-- Task attributes (title, description, due_date, priority, status)
-- ULID generation for unique identification
-- `mark_as_done()` method to update status
+Defines the Task class with ULID generation and task attributes.
 
 ### `app/task_manager.py`
-
-Core business logic layer with:
-- Task CRUD operations
-- Input validation (dates, priorities, status)
-- Database integration
-- In-memory task caching
+Core business logic layer with CRUD operations and validation.
 
 ### `app/task_db.py`
-
-Database abstraction layer with:
-- MySQL connection management
-- SQL queries for task operations
-- Task serialization to/from database
-- Connection error handling
+Database abstraction layer handling MySQL operations.
 
 ### `app/task_app.py`
-
-User interface layer with:
-- Interactive command-line menu
-- User input handling and validation
-- Task workflow management
-- Formatted output display
-
-## Error Handling
-
-The application includes error handling for:
-
-- Invalid date formats (expects YYYY-MM-DD)
-- Past due dates
-- Empty required fields
-- Invalid priority/status values
-- Invalid task IDs
-- Database connection errors
-- General exceptions with user-friendly messages
-
-## Architecture
-
-The application follows a **layered architecture** pattern:
-
-```
-┌─────────────────────────────────────┐
-│      TaskApp (UI Layer)             │
-│  - User interaction                 │
-│  - Input/Output handling            │
-└─────────────────────────────────────┘
-              ↓
-┌─────────────────────────────────────┐
-│   TaskManager (Business Logic)      │
-│  - Task validation                  │
-│  - CRUD operations                  │
-│  - Business rules                   │
-└─────────────────────────────────────┘
-              ↓
-┌─────────────────────────────────────┐
-│   TaskDB (Data Access Layer)        │
-│  - Database connectivity            │
-│  - SQL queries                      │
-│  - Data persistence                 │
-└─────────────────────────────────────┘
-              ↓
-┌─────────────────────────────────────┐
-│       MySQL Database                │
-│  - Data storage                     │
-└─────────────────────────────────────┘
-```
-
-## Future Enhancements
-
-Potential improvements to consider:
-
-- User authentication and authorization
-- Task categories/tags/labels
-- Task filtering and sorting options
-- Data export (CSV, JSON, PDF)
-- Task search and advanced filtering
-- Environment variable configuration (.env)
-- Unit tests and integration tests
-- Web API (Flask/FastAPI)
-- Web UI (React/Vue)
-- Task scheduling and reminders
-- Recurring tasks
+User interface layer with command-line menu and interactions.
 
 ## Troubleshooting
 
 ### Database Connection Issues
 
-If you encounter "Error connecting to MySQL", verify:
-- MySQL server is running
-- Database credentials are correct
-- Database and table exist
-- User has proper permissions
+If you encounter "Error connecting to MySQL":
+- Verify MySQL server is running: `sudo systemctl status mysql`
+- Check database credentials are correct
+- Ensure database `task_app` exists
+- Verify user `task_user` has proper permissions
 
 ### Date Format Issues
 
@@ -401,15 +340,16 @@ Always use the format `YYYY-MM-DD` (e.g., `2026-02-15`)
 
 ### Module Import Errors
 
-Ensure you're running the application from the `app/` directory:
+Ensure you're running from the `app/` directory:
 ```bash
 cd app
 python main.py
 ```
 
-## License
+## Dependencies
 
-This project is provided as-is. Include your license information here if applicable.
+- **ulid-py** - For generating ULIDs
+- **mysql-connector-python** - For MySQL database connectivity
 
 ## Support
 
