@@ -350,7 +350,3 @@ python main.py
 
 - **ulid-py** - For generating ULIDs
 - **mysql-connector-python** - For MySQL database connectivity
-
-## Support
-
-For issues or questions, please refer to the project repository or contact the development team.
