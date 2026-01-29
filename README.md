@@ -29,7 +29,7 @@ A command-line task management application built with Python that allows users t
 ## Project Structure
 
 ```
-OLFU/
+Task-App/
 ├── app/
 │   ├── main.py              # Application entry point
 │   ├── task.py              # Task model class
@@ -53,7 +53,7 @@ OLFU/
 
 ```bash
 git clone <repository-url>
-cd OLFU
+cd Task-App
 ```
 
 ### Step 2: Create Virtual Environment
