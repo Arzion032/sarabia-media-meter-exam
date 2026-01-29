@@ -47,7 +47,7 @@ class TaskApp:
         priority_lvl = input("Priority Level (Low, Medium, High) Default[Medium]: ").strip() or "Medium"
         status = input("Status (Pending, In Progress, Completed) Default[Pending]: ").strip() or "Pending"
         
-        # Parse due date
+        # Parse the due date filed
         try:
             due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
         except ValueError:
@@ -57,20 +57,52 @@ class TaskApp:
         task = self.manager.add_task(title, description, due_date, priority_lvl, status)
         print(f"Task '{task.title}' added with ID {task.task_id}")
         
+
     def list_tasks(self):
-        print("\n--- Task List ---")
-        tasks = self.manager.list_tasks()
+        print("\n-- Filter Options --")
+        print("1. None")
+        print("2. Priority")
+        print("3. Status")
+        print("4. Due Date")
+        choice = input("Choose filter: ").strip()
+
+        by = None
+        value = None
+
+        if choice == "2":
+            by = "priority"
+            value = input("Enter priority [Low/Medium/High]: ").strip().title()
+        elif choice == "3":
+            by = "status"
+            value = input("Enter status [Pending/In Progress/Completed]: ").strip().title()
+        elif choice == "4":
+            by = "due_date"
+            date_str = input("Enter due date (YYYY-MM-DD): ").strip()
+            try:
+                from datetime import datetime
+                value = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except ValueError:
+                print("Invalid date format. Showing all tasks.")
+                by = None
+                value = None
+
+        tasks = self.manager.list_tasks_filtered(filter_by=by, filter_value=value)
         if not tasks:
-            print("No tasks available.")
+            print("No tasks found.")
             return
-        for task in tasks:
-            print(f"ID: {task.task_id} | Title: {task.title} | Due: {task.due_date} | Priority: {task.priority} | Status: {task.status}")
-            
+
+        print(f"{'ID':<28} {'Title':<20} {'Desc':<30} {'Due Date':<12} {'Priority':<10} {'Status':<12}")
+        print("-"*110)
+        for t in tasks:
+            print(f"{t.task_id:<28} {t.title:<20} {t.description:<30} {t.due_date.strftime('%Y-%m-%d'):<12} {t.priority:<10} {t.status:<12}")
+    
+
     def update_task(self):
         print("\n-- Update Task --")
         task_id = input("Task ID: ").strip()
 
         # Find the task first before updating
+        
         task = None
         for t in self.manager.list_tasks():
             if t.task_id == task_id:

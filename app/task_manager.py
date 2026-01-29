@@ -47,6 +47,24 @@ class TaskManager:
     def list_tasks(self):
         return self.tasks
     
+    def list_tasks_filtered(self, filter_by=None, filter_value=None):
+        tasks = self.tasks
+        if not filter_by or filter_by.lower() == "none":
+            return tasks
+
+        if filter_by.lower() == "due_date":
+            # 
+            return [t for t in tasks if t.due_date == filter_value]
+
+        elif filter_by.lower() == "priority":
+            return [t for t in tasks if t.priority.lower() == filter_value.lower()]
+
+        elif filter_by.lower() == "status":
+            return [t for t in tasks if t.status.lower() == filter_value.lower()]
+
+        else:
+            return tasks 
+        
     def update_task(self, task_id: str, **kwargs):
         for task in self.tasks:
             if task.task_id == task_id:
